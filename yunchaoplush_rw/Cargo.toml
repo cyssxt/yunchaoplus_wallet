@@ -1,0 +1,11 @@
+[package]
+name = "yunchaoplush_rw"
+version = "0.1.0"
+authors = ["lightsing <light.tsing@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+log = "0.4"
+anyhow = "1.0"
+actix-web = "4.0.0-beta.3"
+tokio-postgres = "0.7"
