@@ -1,4 +1,4 @@
-use crate::model::{ErrorResponse, Status, SuccessResponse, Withdraw};
+use crate::model::{ErrorResponse, Status, SuccessResponse, Withdraw, PagingQuery};
 use actix_web::web;
 use actix_web::{get, post, put, HttpResponse, Responder, Result};
 use anyhow::Error;
@@ -12,7 +12,7 @@ use serde::{Deserialize, Serialize};
 /// | description     | string | 附加说明，最多 255 个 Unicode 字符。         | optional |
 /// | extra           | object      | 额外参数，具体渠道不同有所区别，参见额外参数                 | optional      |
 #[derive(Clone, Debug, Serialize, Deserialize)]
-struct CreateReq {
+pub struct CreateReq {
     settle: String,
     amount: i32,
     description: Option<String>,
@@ -23,7 +23,7 @@ struct CreateReq {
 /// | -------------- | ----------- | ------------------------------------------------------------ | ------------- |
 /// | status | string | 取值范围：确认为 `pending`，取消为 `canceled`。 | required |
 #[derive(Clone, Debug, Serialize, Deserialize)]
-struct UpdateReq {
+pub struct UpdateReq {
     status: Status,
 }
 
@@ -91,6 +91,17 @@ pub async fn update_withdraw(
 pub async fn get_withdraw_list(
     pool: web::Data<Pool>,
     web::Path(wallet_id): web::Path<String>,
-) -> impl Responder {
-    HttpResponse::NoContent()
+    web::Query(paging): web::Query<PagingQuery>,
+) -> HttpResponse {
+    if !paging.is_valid() {
+        return HttpResponse::BadRequest()
+            .json(ErrorResponse::code("invalid_paging_query"))
+    }
+    match Withdraw::list_withdraw(&pool, wallet_id.clone(), paging.clone()).await {
+        Ok(withdraw) => HttpResponse::Ok().json(SuccessResponse::new(withdraw)),
+        Err(e) => {
+            error!("/wallets/{}/recharges({:?}): {}", wallet_id, paging, e);
+            HttpResponse::NotFound().json(ErrorResponse::code("withdraw_list_not_found"))
+        }
+    }
 }

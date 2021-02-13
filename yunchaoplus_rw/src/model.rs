@@ -382,6 +382,43 @@ impl Withdraw {
         let row = client.query_one(&stmt, &[&wallet_id, &id, &status]).await?;
         Ok(Self::try_from(row)?)
     }
+
+    /// List `Withdraw` objects with paging
+    pub async fn list_withdraw(
+        pool: &Pool,
+        wallet_id: String,
+        paging: PagingQuery,
+    ) -> Result<Vec<Self>, DBError> {
+        let client = pool.get().await?;
+        let offset = ((paging.page - 1) * paging.count) as i64;
+        let limit = paging.count as i64;
+        let mut params: Vec<&(dyn ToSql + Sync)> = vec![&wallet_id, &limit, &offset];
+        let fragment: &str = if paging.begin_time.is_some() && paging.end_time.is_some() {
+            params.push(paging.begin_time.as_ref().unwrap());
+            params.push(paging.end_time.as_ref().unwrap());
+            "and created >= $4 and created <= $4"
+        } else if paging.begin_time.is_some() {
+            params.push(paging.begin_time.as_ref().unwrap());
+            "and created >= $4"
+        } else if paging.end_time.is_some() {
+            params.push(paging.end_time.as_ref().unwrap());
+            "and created <= $4"
+        } else {
+            ""
+        };
+        let stmt = client
+            .prepare(
+                format!(
+                    "select * from withdraw where wallet_id = $1 {} limit $2 offset $3",
+                    fragment
+                )
+                    .as_str(),
+            )
+            .await?;
+        let rows = client.query(&stmt, &params).await?;
+        let withdraws: Result<Vec<Self>, tokio_postgres::Error> = rows.into_iter().map(|row| Self::try_from(row)).collect();
+        Ok(withdraws?)
+    }
 }
 
 #[doc(hidden)]
