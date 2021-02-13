@@ -8,9 +8,13 @@ use tokio_postgres::NoTls;
 
 use crate::config::Config;
 
+/// Configuration loader
 mod config;
+/// Data Models
 mod model;
+/// `Recharge` related handlers
 mod recharge;
+/// `Withdraw` related handlers
 mod withdraw;
 
 #[actix_web::main]
