@@ -1,4 +1,4 @@
-use crate::model::{ErrorResponse, Recharge, SuccessResponse};
+use crate::model::{ErrorResponse, PagingQuery, Recharge, SuccessResponse};
 use actix_web::{get, post, web, HttpResponse, Responder};
 use deadpool_postgres::Pool;
 use serde::{Deserialize, Serialize};
@@ -46,13 +46,13 @@ pub async fn create_recharge(
     }
 }
 
-#[get("/wallets/${wallet_id}//${id}")]
+#[get("/wallets/{wallet_id}/recharges/{id}")]
 pub async fn get_recharge(
     pool: web::Data<Pool>,
-    web::Path((wallet_id, id)): web::Path<(String, String)>
+    web::Path((wallet_id, id)): web::Path<(String, String)>,
 ) -> HttpResponse {
     match Recharge::get_by_wallet_id(&pool, wallet_id.clone(), id.clone()).await {
-        Ok(withdraw) => HttpResponse::Ok().json(SuccessResponse::new(withdraw)),
+        Ok(recharge) => HttpResponse::Ok().json(SuccessResponse::new(recharge)),
         Err(e) => {
             error!("/wallets/{}/recharges/{}: {}", wallet_id, id, e);
             HttpResponse::NotFound().json(ErrorResponse::code("recharge_not_found"))
@@ -60,7 +60,21 @@ pub async fn get_recharge(
     }
 }
 
-#[get("/wallets/${wallet_id}/recharges")]
-pub async fn get_recharge_list() -> impl Responder {
-    HttpResponse::NoContent()
+#[get("/wallets/{wallet_id}/recharges")]
+pub async fn get_recharge_list(
+    pool: web::Data<Pool>,
+    web::Path(wallet_id): web::Path<String>,
+    web::Query(paging): web::Query<PagingQuery>,
+) -> HttpResponse {
+    if !paging.is_valid() {
+        return HttpResponse::BadRequest()
+            .json(ErrorResponse::code("invalid_paging_query"))
+    }
+    match Recharge::list_recharge(&pool, wallet_id.clone(), paging.clone()).await {
+        Ok(recharge) => HttpResponse::Ok().json(SuccessResponse::new(recharge)),
+        Err(e) => {
+            error!("/wallets/{}/recharges({:?}): {}", wallet_id, paging, e);
+            HttpResponse::NotFound().json(ErrorResponse::code("recharge_list_not_found"))
+        }
+    }
 }

@@ -81,12 +81,31 @@ pub enum Status {
     Canceled,
 }
 
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct PagingQuery {
+    page: u64,
+    count: u64,
+    #[serde(
+        default,
+        serialize_with = "timestamp_ser_option",
+        deserialize_with = "timestamp_de_option"
+    )]
+    begin_time: Option<NaiveDateTime>,
+    #[serde(
+        default,
+        serialize_with = "timestamp_ser_option",
+        deserialize_with = "timestamp_de_option"
+    )]
+    end_time: Option<NaiveDateTime>,
+}
+
 #[derive(Clone, Debug, Serialize)]
 /// Recharge object
 pub struct Recharge {
     /// 对象id
     id: String,
     /// 值为recharge，表示此对象为充值对象
+    #[serde(rename = "type")]
     _type: ObjType,
     /// 账号创建时的 Unix 时间戳
     #[serde(serialize_with = "timestamp_ser", deserialize_with = "timestamp_de")]
@@ -195,6 +214,18 @@ impl TryFrom<Row> for Withdraw {
     }
 }
 
+impl PagingQuery {
+    pub fn is_valid(&self) -> bool {
+        if self.page <= 0 {
+            return false;
+        }
+        if self.count <= 0 {
+            return false;
+        }
+        return true;
+    }
+}
+
 impl Recharge {
     /// Create a new `Recharge` object
     pub async fn create_recharge(
@@ -226,7 +257,11 @@ impl Recharge {
     }
 
     /// Get a `Recharge` object by wallet id and self id
-    pub async fn get_by_wallet_id(pool: &Pool, wallet_id: String, id: String) -> Result<Self, DBError> {
+    pub async fn get_by_wallet_id(
+        pool: &Pool,
+        wallet_id: String,
+        id: String,
+    ) -> Result<Self, DBError> {
         let client = pool.get().await?;
         let stmt = client
             .prepare(
@@ -239,6 +274,43 @@ impl Recharge {
             .await?;
         let row = client.query_one(&stmt, &[&wallet_id, &id]).await?;
         Ok(Self::try_from(row)?)
+    }
+
+    /// List `Recharge` objects with paging
+    pub async fn list_recharge(
+        pool: &Pool,
+        wallet_id: String,
+        paging: PagingQuery,
+    ) -> Result<Vec<Recharge>, DBError> {
+        let client = pool.get().await?;
+        let offset = ((paging.page - 1) * paging.count) as i64;
+        let limit = paging.count as i64;
+        let mut params: Vec<&(dyn ToSql + Sync)> = vec![&wallet_id, &limit, &offset];
+        let fragment: &str = if paging.begin_time.is_some() && paging.end_time.is_some() {
+            params.push(paging.begin_time.as_ref().unwrap());
+            params.push(paging.end_time.as_ref().unwrap());
+            "and created >= $4 and created <= $4"
+        } else if paging.begin_time.is_some() {
+            params.push(paging.begin_time.as_ref().unwrap());
+            "and created >= $4"
+        } else if paging.end_time.is_some() {
+            params.push(paging.end_time.as_ref().unwrap());
+            "and created <= $4"
+        } else {
+            ""
+        };
+        let stmt = client
+            .prepare(
+                format!(
+                    "select * from recharge where wallet_id = $1 {} limit $2 offset $3",
+                    fragment
+                )
+                .as_str(),
+            )
+            .await?;
+        let rows = client.query(&stmt, &params).await?;
+        let recharges: Result<Vec<Self>, tokio_postgres::Error> = rows.into_iter().map(|row| Self::try_from(row)).collect();
+        Ok(recharges?)
     }
 }
 
@@ -270,7 +342,11 @@ impl Withdraw {
     }
 
     /// Get a `Withdraw` object by wallet id and self id
-    pub async fn get_by_wallet_id(pool: &Pool, wallet_id: String, id: String) -> Result<Self, DBError> {
+    pub async fn get_by_wallet_id(
+        pool: &Pool,
+        wallet_id: String,
+        id: String,
+    ) -> Result<Self, DBError> {
         let client = pool.get().await?;
         let stmt = client
             .prepare(
