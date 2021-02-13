@@ -1,6 +1,6 @@
 use actix_web::body::Body;
 use actix_web::{Error, HttpRequest, Responder};
-use anyhow::{Result};
+use anyhow::Result;
 use chrono::NaiveDateTime;
 use deadpool_postgres::Pool;
 use serde::de::DeserializeOwned;
@@ -170,12 +170,13 @@ impl TryFrom<Row> for Withdraw {
 }
 
 impl Withdraw {
-    pub async fn create_withdraw(pool: &Pool,
-                                 wallet_id: String,
-                                 settle: String,
-                                 amount:i32,
-                                 description: Option<String>,
-                                 extra: Option<serde_json::Value>,
+    pub async fn create_withdraw(
+        pool: &Pool,
+        wallet_id: String,
+        settle: String,
+        amount: i32,
+        description: Option<String>,
+        extra: Option<serde_json::Value>,
     ) -> Result<Self> {
         let client = pool.get().await?;
         let stmt = client
@@ -188,7 +189,9 @@ impl Withdraw {
                 "#,
             )
             .await?;
-        let row = client.query_one(&stmt, &[&wallet_id, &settle, &amount, &description, &extra]).await?;
+        let row = client
+            .query_one(&stmt, &[&wallet_id, &settle, &amount, &description, &extra])
+            .await?;
         Ok(Self::try_from(row)?)
     }
 
@@ -204,6 +207,27 @@ impl Withdraw {
             )
             .await?;
         let row = client.query_one(&stmt, &[&wallet_id, &id]).await?;
+        Ok(Self::try_from(row)?)
+    }
+
+    pub async fn set_wallet_status(
+        pool: &Pool,
+        wallet_id: String,
+        id: String,
+        status: Status,
+    ) -> Result<Self> {
+        let client = pool.get().await?;
+        let stmt = client
+            .prepare(
+                r#"
+            update withdraw
+            set status = $3::status
+            where wallet_id = $1 and id = $2
+            returning *;
+            "#,
+            )
+            .await?;
+        let row = client.query_one(&stmt, &[&wallet_id, &id, &status]).await?;
         Ok(Self::try_from(row)?)
     }
 }

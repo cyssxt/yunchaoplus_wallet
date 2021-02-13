@@ -1,9 +1,9 @@
-use crate::model::{ErrorResponse, SuccessResponse, Withdraw};
+use crate::model::{ErrorResponse, Status, SuccessResponse, Withdraw};
 use actix_web::web;
 use actix_web::{get, post, put, HttpResponse, Responder, Result};
 use anyhow::Error;
 use deadpool_postgres::Pool;
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 /// | 字段名         | 类型        | 描述                                                         | 属性          |
 /// | -------------- | ----------- | ------------------------------------------------------------ | ------------- |
@@ -19,24 +19,33 @@ struct CreateReq {
     extra: Option<serde_json::Value>,
 }
 
+/// | 字段名         | 类型        | 描述                                                         | 属性          |
+/// | -------------- | ----------- | ------------------------------------------------------------ | ------------- |
+/// | status | string | 取值范围：确认为 `pending`，取消为 `canceled`。 | required |
+#[derive(Clone, Debug, Serialize, Deserialize)]
+struct UpdateReq {
+    status: Status,
+}
+
 #[post("/wallets/{wallet_id}/withdraws")]
 pub async fn create_withdraw(
     pool: web::Data<Pool>,
     web::Path(wallet_id): web::Path<String>,
-    web::Json(CreateReq { settle, amount, description, extra }): web::Json<CreateReq>,
-) -> impl Responder {
-    let result = Withdraw::create_withdraw(&pool,
-        wallet_id.clone(),
+    web::Json(CreateReq {
         settle,
         amount,
         description,
-        extra
-    ).await;
+        extra,
+    }): web::Json<CreateReq>,
+) -> impl Responder {
+    let result =
+        Withdraw::create_withdraw(&pool, wallet_id.clone(), settle, amount, description, extra)
+            .await;
     match result {
         Ok(withdraw) => HttpResponse::Ok().json(SuccessResponse::new(withdraw)),
         Err(e) => {
             error!("/wallets/{}/withdraws: {}", wallet_id, e);
-            HttpResponse::NotFound().json(ErrorResponse::code("withdraw_creation_failed"))
+            HttpResponse::InternalServerError().json(ErrorResponse::code("withdraw_creation_failed"))
         }
     }
 }
@@ -59,8 +68,19 @@ pub async fn get_withdraw(
 pub async fn update_withdraw(
     pool: web::Data<Pool>,
     web::Path((wallet_id, id)): web::Path<(String, String)>,
-) -> impl Responder {
-    HttpResponse::NoContent()
+    web::Json(UpdateReq { status }): web::Json<UpdateReq>,
+) -> HttpResponse {
+    match status {
+        Status::Pending | Status::Canceled => (),
+        _ => return HttpResponse::BadRequest().json(ErrorResponse::code("invalid_withdraw_update_status"))
+    }
+    match Withdraw::set_wallet_status(&pool, wallet_id.clone(), id.clone(), status).await {
+        Ok(withdraw) => HttpResponse::Ok().json(SuccessResponse::new(withdraw)),
+        Err(e) => {
+            error!("/wallets/{}/withdraws/{}: {}", wallet_id, id, e);
+            HttpResponse::InternalServerError().json(ErrorResponse::code("update_withdraw_failed"))
+        }
+    }
 }
 
 #[get("/wallets/{wallet_id}/withdraws")]
