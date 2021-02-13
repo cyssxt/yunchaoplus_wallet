@@ -10,6 +10,7 @@ use crate::config::Config;
 
 /// Configuration loader
 mod config;
+mod error;
 /// Data Models
 mod model;
 /// `Recharge` related handlers

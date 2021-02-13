@@ -5,5 +5,5 @@ pub enum DBError {
     #[error("DB Pool error")]
     Pool(#[from] deadpool_postgres::PoolError),
     #[error("Database error")]
-    Postgres(#[from] tokio_postgres::Error)
+    Postgres(#[from] tokio_postgres::Error),
 }
