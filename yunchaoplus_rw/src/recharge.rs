@@ -1,4 +1,4 @@
-use actix_web::{get, post, Responder, HttpResponse};
+use actix_web::{get, post, HttpResponse, Responder};
 
 #[post("/wallets/${wallet_id}/recharges")]
 pub async fn create_recharge() -> impl Responder {

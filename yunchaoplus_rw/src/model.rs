@@ -97,6 +97,8 @@ mod tests {
 
     async fn test_write() {
         let (client, connection) =
-            tokio_postgres::connect("host=localhost user=curdata password=curdata", NoTls).await.unwrap();
+            tokio_postgres::connect("host=localhost user=curdata password=curdata", NoTls)
+                .await
+                .unwrap();
     }
 }
