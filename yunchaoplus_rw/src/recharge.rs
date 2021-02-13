@@ -46,9 +46,18 @@ pub async fn create_recharge(
     }
 }
 
-#[get("/wallets/${wallet_id}/recharges/${id}")]
-pub async fn get_recharge() -> impl Responder {
-    HttpResponse::NoContent()
+#[get("/wallets/${wallet_id}//${id}")]
+pub async fn get_recharge(
+    pool: web::Data<Pool>,
+    web::Path((wallet_id, id)): web::Path<(String, String)>
+) -> HttpResponse {
+    match Recharge::get_by_wallet_id(&pool, wallet_id.clone(), id.clone()).await {
+        Ok(withdraw) => HttpResponse::Ok().json(SuccessResponse::new(withdraw)),
+        Err(e) => {
+            error!("/wallets/{}/recharges/{}: {}", wallet_id, id, e);
+            HttpResponse::NotFound().json(ErrorResponse::code("recharge_not_found"))
+        }
+    }
 }
 
 #[get("/wallets/${wallet_id}/recharges")]

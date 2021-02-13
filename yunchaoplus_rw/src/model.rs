@@ -218,6 +218,21 @@ impl Recharge {
             .await?;
         Ok(Self::try_from(row)?)
     }
+
+    pub async fn get_by_wallet_id(pool: &Pool, wallet_id: String, id: String) -> Result<Self> {
+        let client = pool.get().await?;
+        let stmt = client
+            .prepare(
+                r#"
+            select * from recharge
+            where wallet_id = $1 and id = $2
+            limit 1
+        "#,
+            )
+            .await?;
+        let row = client.query_one(&stmt, &[&wallet_id, &id]).await?;
+        Ok(Self::try_from(row)?)
+    }
 }
 
 impl Withdraw {
