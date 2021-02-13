@@ -84,7 +84,7 @@ pub struct Recharge {
     /// 对象id
     id: String,
     /// 值为recharge，表示此对象为充值对象
-    _type: String,
+    _type: ObjType,
     /// 账号创建时的 Unix 时间戳
     #[serde(serialize_with = "timestamp_ser", deserialize_with = "timestamp_de")]
     created: NaiveDateTime,
@@ -149,6 +149,27 @@ pub struct Withdraw {
     amount: i32,
 }
 
+impl TryFrom<Row> for Recharge {
+    type Error = tokio_postgres::Error;
+
+    fn try_from(row: Row) -> Result<Self, Self::Error> {
+        Ok(Self {
+            id: row.try_get("id")?,
+            _type: row.try_get("type")?,
+            created: row.try_get("created")?,
+            amount: row.try_get("amount")?,
+            recharge_amount: row.try_get("recharge_amount")?,
+            fee: row.try_get("fee")?,
+            succeeded: row.try_get("succeeded")?,
+            time_succeeded: row.try_get("time_succeeded")?,
+            wallet_id: row.try_get("wallet_id")?,
+            description: row.try_get("description")?,
+            extra: row.try_get("extra")?,
+            settle: row.try_get("settle")?,
+        })
+    }
+}
+
 impl TryFrom<Row> for Withdraw {
     type Error = tokio_postgres::Error;
 
@@ -166,6 +187,42 @@ impl TryFrom<Row> for Withdraw {
             time_succeeded: row.try_get("time_succeeded")?,
             amount: row.try_get("amount")?,
         })
+    }
+}
+
+impl Recharge {
+    pub async fn create_recharge(
+        pool: &Pool,
+        wallet_id: String,
+        recharge_amount: i32,
+        settle: String,
+        description: Option<String>,
+        extra: Option<serde_json::Value>,
+    ) -> Result<Self> {
+        let client = pool.get().await?;
+        let stmt = client
+            .prepare(
+                r#"
+            insert into recharge
+                (id, wallet_id, recharge_amount, settle, amount, description, extra)
+            values (uuid_generate_v4(), $1, $2, $3, $2, $4, $5)
+            returning *
+        "#,
+            )
+            .await?;
+        let row = client
+            .query_one(
+                &stmt,
+                &[
+                    &wallet_id,
+                    &recharge_amount,
+                    &settle,
+                    &description,
+                    &extra,
+                ],
+            )
+            .await?;
+        Ok(Self::try_from(row)?)
     }
 }
 
