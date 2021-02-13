@@ -9,6 +9,7 @@ use std::convert::TryFrom;
 use tokio_postgres::types::{FromSql, ToSql};
 use tokio_postgres::Row;
 
+/// Success response wrapper
 /// ```json
 /// {
 ///     "code": 0,
@@ -23,6 +24,7 @@ pub struct SuccessResponse<T: Serialize> {
     data: T,
 }
 
+/// Error response wrapper
 #[derive(Serialize)]
 pub struct ErrorResponse {
     code: String,
@@ -50,6 +52,7 @@ impl ErrorResponse {
 
 #[derive(Copy, Clone, Debug, ToSql, FromSql, Serialize, Deserialize)]
 #[postgres(name = "obj_type")]
+/// Object type enum
 pub enum ObjType {
     #[postgres(name = "recharge")]
     #[serde(rename = "recharge")]
@@ -61,6 +64,7 @@ pub enum ObjType {
 
 #[derive(Copy, Clone, Debug, ToSql, FromSql, Serialize, Deserialize)]
 #[postgres(name = "status")]
+/// Status enum
 pub enum Status {
     #[postgres(name = "created")]
     #[serde(rename = "created")]
@@ -80,6 +84,7 @@ pub enum Status {
 }
 
 #[derive(Clone, Debug, Serialize)]
+/// Recharge object
 pub struct Recharge {
     /// 对象id
     id: String,
@@ -112,8 +117,8 @@ pub struct Recharge {
     settle: String,
 }
 
-/// Withdraw
 #[derive(Clone, Debug, Serialize, Deserialize)]
+/// Withdraw object
 pub struct Withdraw {
     /// 对象id
     id: String,
@@ -149,6 +154,7 @@ pub struct Withdraw {
     amount: i32,
 }
 
+/// Manually mapping from postgres row to Recharge
 impl TryFrom<Row> for Recharge {
     type Error = tokio_postgres::Error;
 
@@ -170,6 +176,7 @@ impl TryFrom<Row> for Recharge {
     }
 }
 
+/// Manually mapping from postgres row to Withdraw
 impl TryFrom<Row> for Withdraw {
     type Error = tokio_postgres::Error;
 
@@ -191,6 +198,7 @@ impl TryFrom<Row> for Withdraw {
 }
 
 impl Recharge {
+    /// Create a new `Recharge` object
     pub async fn create_recharge(
         pool: &Pool,
         wallet_id: String,
@@ -219,6 +227,7 @@ impl Recharge {
         Ok(Self::try_from(row)?)
     }
 
+    /// Get a `Recharge` object by wallet id and self id
     pub async fn get_by_wallet_id(pool: &Pool, wallet_id: String, id: String) -> Result<Self> {
         let client = pool.get().await?;
         let stmt = client
@@ -236,6 +245,7 @@ impl Recharge {
 }
 
 impl Withdraw {
+    /// Create a new `Withdraw` object
     pub async fn create_withdraw(
         pool: &Pool,
         wallet_id: String,
@@ -261,6 +271,7 @@ impl Withdraw {
         Ok(Self::try_from(row)?)
     }
 
+    /// Get a `Withdraw` object by wallet id and self id
     pub async fn get_by_wallet_id(pool: &Pool, wallet_id: String, id: String) -> Result<Self> {
         let client = pool.get().await?;
         let stmt = client
@@ -276,6 +287,7 @@ impl Withdraw {
         Ok(Self::try_from(row)?)
     }
 
+    /// Update a `Withdraw` object status
     pub async fn set_wallet_status(
         pool: &Pool,
         wallet_id: String,
@@ -299,6 +311,7 @@ impl Withdraw {
 }
 
 #[doc(hidden)]
+/// deserializer of `NaiveDateTime` from `i64`
 fn timestamp_de<'de, D>(deserializer: D) -> Result<NaiveDateTime, D::Error>
 where
     D: Deserializer<'de>,
@@ -307,6 +320,7 @@ where
 }
 
 #[doc(hidden)]
+/// deserializer of `Option<NaiveDateTime>` from `Option<i64>`
 fn timestamp_de_option<'de, D>(deserializer: D) -> Result<Option<NaiveDateTime>, D::Error>
 where
     D: Deserializer<'de>,
@@ -316,6 +330,7 @@ where
 }
 
 #[doc(hidden)]
+/// serializer of `NaiveDateTime` to `i64`
 fn timestamp_ser<S>(time: &NaiveDateTime, serializer: S) -> Result<S::Ok, S::Error>
 where
     S: Serializer,
@@ -324,6 +339,7 @@ where
 }
 
 #[doc(hidden)]
+/// serializer of `Option<NaiveDateTime>` to `i64` or `None`
 fn timestamp_ser_option<S>(time: &Option<NaiveDateTime>, serializer: S) -> Result<S::Ok, S::Error>
 where
     S: Serializer,
