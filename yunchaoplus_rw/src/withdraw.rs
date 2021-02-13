@@ -1,7 +1,6 @@
 use crate::model::{ErrorResponse, Status, SuccessResponse, Withdraw, PagingQuery};
 use actix_web::web;
-use actix_web::{get, post, put, HttpResponse, Responder, Result};
-use anyhow::Error;
+use actix_web::{get, post, put, HttpResponse, Responder};
 use deadpool_postgres::Pool;
 use serde::{Deserialize, Serialize};
 

@@ -216,13 +216,13 @@ impl TryFrom<Row> for Withdraw {
 
 impl PagingQuery {
     pub fn is_valid(&self) -> bool {
-        if self.page <= 0 {
-            return false;
+        if self.page == 0 {
+            return false
         }
-        if self.count <= 0 {
-            return false;
+        if self.count == 0 {
+            return false
         }
-        return true;
+        true
     }
 }
 
@@ -309,7 +309,7 @@ impl Recharge {
             )
             .await?;
         let rows = client.query(&stmt, &params).await?;
-        let recharges: Result<Vec<Self>, tokio_postgres::Error> = rows.into_iter().map(|row| Self::try_from(row)).collect();
+        let recharges: Result<Vec<Self>, tokio_postgres::Error> = rows.into_iter().map(Self::try_from).collect();
         Ok(recharges?)
     }
 }
@@ -416,7 +416,7 @@ impl Withdraw {
             )
             .await?;
         let rows = client.query(&stmt, &params).await?;
-        let withdraws: Result<Vec<Self>, tokio_postgres::Error> = rows.into_iter().map(|row| Self::try_from(row)).collect();
+        let withdraws: Result<Vec<Self>, tokio_postgres::Error> = rows.into_iter().map(Self::try_from).collect();
         Ok(withdraws?)
     }
 }

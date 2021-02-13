@@ -1,5 +1,5 @@
 use crate::model::{ErrorResponse, PagingQuery, Recharge, SuccessResponse};
-use actix_web::{get, post, web, HttpResponse, Responder};
+use actix_web::{get, post, web, HttpResponse};
 use deadpool_postgres::Pool;
 use serde::{Deserialize, Serialize};
 
@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize};
 /// | description     | string | 附加说明，最多 255 个 Unicode 字符。         | optional |
 /// | extra           | object      | 额外参数，具体渠道不同有所区别，参见额外参数                 | optional      |
 #[derive(Clone, Debug, Serialize, Deserialize)]
-struct CreateReq {
+pub struct CreateReq {
     recharge_amount: i32,
     settle: String,
     description: Option<String>,

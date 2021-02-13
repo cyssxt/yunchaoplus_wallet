@@ -1,8 +1,4 @@
-use deadpool_postgres::{Manager, Pool};
-use dotenv::dotenv;
 use serde::Deserialize;
-use std::convert::TryInto;
-use tokio::stream::StreamExt;
 
 #[derive(Debug, Deserialize)]
 pub struct Config {
