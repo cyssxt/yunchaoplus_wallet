@@ -1,9 +1,9 @@
 #[macro_use]
 extern crate log;
 
-use dotenv::dotenv;
 use actix_web::middleware::Logger;
 use actix_web::{App, HttpServer};
+use dotenv::dotenv;
 use tokio_postgres::NoTls;
 
 use crate::config::Config;

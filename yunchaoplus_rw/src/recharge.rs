@@ -35,7 +35,9 @@ pub async fn create_recharge(
         settle,
         description,
         extra,
-    ).await {
+    )
+    .await
+    {
         Ok(recharge) => HttpResponse::Ok().json(SuccessResponse::new(recharge)),
         Err(e) => {
             error!("/wallets/{}/recharges: {}", wallet_id, e);

@@ -45,7 +45,8 @@ pub async fn create_withdraw(
         Ok(withdraw) => HttpResponse::Ok().json(SuccessResponse::new(withdraw)),
         Err(e) => {
             error!("/wallets/{}/withdraws: {}", wallet_id, e);
-            HttpResponse::InternalServerError().json(ErrorResponse::code("withdraw_creation_failed"))
+            HttpResponse::InternalServerError()
+                .json(ErrorResponse::code("withdraw_creation_failed"))
         }
     }
 }
@@ -72,7 +73,10 @@ pub async fn update_withdraw(
 ) -> HttpResponse {
     match status {
         Status::Pending | Status::Canceled => (),
-        _ => return HttpResponse::BadRequest().json(ErrorResponse::code("invalid_withdraw_update_status"))
+        _ => {
+            return HttpResponse::BadRequest()
+                .json(ErrorResponse::code("invalid_withdraw_update_status"))
+        }
     }
     match Withdraw::set_wallet_status(&pool, wallet_id.clone(), id.clone(), status).await {
         Ok(withdraw) => HttpResponse::Ok().json(SuccessResponse::new(withdraw)),

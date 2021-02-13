@@ -213,13 +213,7 @@ impl Recharge {
         let row = client
             .query_one(
                 &stmt,
-                &[
-                    &wallet_id,
-                    &recharge_amount,
-                    &settle,
-                    &description,
-                    &extra,
-                ],
+                &[&wallet_id, &recharge_amount, &settle, &description, &extra],
             )
             .await?;
         Ok(Self::try_from(row)?)
