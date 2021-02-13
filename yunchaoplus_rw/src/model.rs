@@ -1,6 +1,6 @@
 use actix_web::body::Body;
 use actix_web::{Error, HttpRequest, Responder};
-use anyhow::Result;
+use anyhow::{Result};
 use chrono::NaiveDateTime;
 use deadpool_postgres::Pool;
 use serde::de::DeserializeOwned;
@@ -97,14 +97,17 @@ pub struct Recharge {
     /// 是否已充值成功
     succeeded: bool,
     /// 充值成功时间，用 Unix 时间戳表示
-    #[serde(serialize_with = "timestamp_ser_option", deserialize_with = "timestamp_de_option")]
+    #[serde(
+        serialize_with = "timestamp_ser_option",
+        deserialize_with = "timestamp_de_option"
+    )]
     time_succeeded: Option<NaiveDateTime>,
     /// 充值目标 `wallet_id` 对象的 `id`
     wallet_id: String,
     /// 附加说明，最多 255 个 Unicode 字符
-    description: String,
+    description: Option<String>,
     /// 扩展用户字段
-    extra: serde_json::Value,
+    extra: Option<serde_json::Value>,
     /// 结算对象id
     settle: String,
 }
@@ -131,10 +134,16 @@ pub struct Withdraw {
     /// 提现使用的 settle 对象的 id
     settle: String,
     /// 提现取消时间，用 Unix 时间戳表示
-    #[serde(serialize_with = "timestamp_ser_option", deserialize_with = "timestamp_de_option")]
+    #[serde(
+        serialize_with = "timestamp_ser_option",
+        deserialize_with = "timestamp_de_option"
+    )]
     time_canceled: Option<NaiveDateTime>,
     /// 提现成功时间，用 Unix 时间戳表示
-    #[serde(serialize_with = "timestamp_ser_option", deserialize_with = "timestamp_de_option")]
+    #[serde(
+        serialize_with = "timestamp_ser_option",
+        deserialize_with = "timestamp_de_option"
+    )]
     time_succeeded: Option<NaiveDateTime>,
     /// 提现金额
     amount: i32,
@@ -161,6 +170,28 @@ impl TryFrom<Row> for Withdraw {
 }
 
 impl Withdraw {
+    pub async fn create_withdraw(pool: &Pool,
+                                 wallet_id: String,
+                                 settle: String,
+                                 amount:i32,
+                                 description: Option<String>,
+                                 extra: Option<serde_json::Value>,
+    ) -> Result<Self> {
+        let client = pool.get().await?;
+        let stmt = client
+            .prepare(
+                r#"
+                insert into withdraw
+                    (id, wallet_id, settle, amount, description, extra)
+                values (uuid_generate_v4(), $1, $2, $3, $4, $5)
+                returning *;
+                "#,
+            )
+            .await?;
+        let row = client.query_one(&stmt, &[&wallet_id, &settle, &amount, &description, &extra]).await?;
+        Ok(Self::try_from(row)?)
+    }
+
     pub async fn get_by_wallet_id(pool: &Pool, wallet_id: String, id: String) -> Result<Self> {
         let client = pool.get().await?;
         let stmt = client
@@ -177,6 +208,7 @@ impl Withdraw {
     }
 }
 
+#[doc(hidden)]
 fn timestamp_de<'de, D>(deserializer: D) -> Result<NaiveDateTime, D::Error>
 where
     D: Deserializer<'de>,
@@ -184,6 +216,7 @@ where
     i64::deserialize(deserializer).map(|ts| NaiveDateTime::from_timestamp(ts, 0))
 }
 
+#[doc(hidden)]
 fn timestamp_de_option<'de, D>(deserializer: D) -> Result<Option<NaiveDateTime>, D::Error>
 where
     D: Deserializer<'de>,
@@ -192,6 +225,7 @@ where
         .map(|ts_option| ts_option.map(|ts| NaiveDateTime::from_timestamp(ts, 0)))
 }
 
+#[doc(hidden)]
 fn timestamp_ser<S>(time: &NaiveDateTime, serializer: S) -> Result<S::Ok, S::Error>
 where
     S: Serializer,
@@ -199,6 +233,7 @@ where
     serializer.serialize_i64(time.timestamp())
 }
 
+#[doc(hidden)]
 fn timestamp_ser_option<S>(time: &Option<NaiveDateTime>, serializer: S) -> Result<S::Ok, S::Error>
 where
     S: Serializer,
@@ -209,6 +244,7 @@ where
     }
 }
 
+#[doc(hidden)]
 #[cfg(test)]
 mod tests {
     use lazy_static::lazy_static;
