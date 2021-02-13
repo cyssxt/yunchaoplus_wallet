@@ -1,13 +1,11 @@
-use actix_web::body::Body;
-use actix_web::{Error, HttpRequest, Responder};
-use anyhow::Result;
 use chrono::NaiveDateTime;
 use deadpool_postgres::Pool;
-use serde::de::DeserializeOwned;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::convert::TryFrom;
 use tokio_postgres::types::{FromSql, ToSql};
 use tokio_postgres::Row;
+
+use crate::error::DBError;
 
 /// Success response wrapper
 /// ```json
@@ -206,7 +204,7 @@ impl Recharge {
         settle: String,
         description: Option<String>,
         extra: Option<serde_json::Value>,
-    ) -> Result<Self> {
+    ) -> Result<Self, DBError> {
         let client = pool.get().await?;
         let stmt = client
             .prepare(
@@ -228,7 +226,7 @@ impl Recharge {
     }
 
     /// Get a `Recharge` object by wallet id and self id
-    pub async fn get_by_wallet_id(pool: &Pool, wallet_id: String, id: String) -> Result<Self> {
+    pub async fn get_by_wallet_id(pool: &Pool, wallet_id: String, id: String) -> Result<Self, DBError> {
         let client = pool.get().await?;
         let stmt = client
             .prepare(
@@ -253,7 +251,7 @@ impl Withdraw {
         amount: i32,
         description: Option<String>,
         extra: Option<serde_json::Value>,
-    ) -> Result<Self> {
+    ) -> Result<Self, DBError> {
         let client = pool.get().await?;
         let stmt = client
             .prepare(
@@ -272,7 +270,7 @@ impl Withdraw {
     }
 
     /// Get a `Withdraw` object by wallet id and self id
-    pub async fn get_by_wallet_id(pool: &Pool, wallet_id: String, id: String) -> Result<Self> {
+    pub async fn get_by_wallet_id(pool: &Pool, wallet_id: String, id: String) -> Result<Self, DBError> {
         let client = pool.get().await?;
         let stmt = client
             .prepare(
@@ -293,7 +291,7 @@ impl Withdraw {
         wallet_id: String,
         id: String,
         status: Status,
-    ) -> Result<Self> {
+    ) -> Result<Self, DBError> {
         let client = pool.get().await?;
         let stmt = client
             .prepare(
