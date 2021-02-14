@@ -1,0 +1,8 @@
+[source.crates-io]
+replace-with = 'sjtu'
+
+[source.sjtu]
+registry = "https://mirrors.sjtug.sjtu.edu.cn/git/crates.io-index/"
+
+[build]
+target = "x86_64-unknown-linux-musl"
