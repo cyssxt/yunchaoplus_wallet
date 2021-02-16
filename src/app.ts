@@ -1,5 +1,5 @@
 import Koa from 'koa';
-import Config from './config';
+import Config from './util/config';
 import catchError from './controller/exception';
 import bodyParser from 'koa-bodyparser';
 import 'reflect-metadata';

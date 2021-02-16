@@ -54,20 +54,22 @@ sh start.sh
 要构建的仓库分支
 
 ### ConfigMap
+#### docker配置路径 /app/config.json
 ```json
 {
-    serverPort:8080,//运行端口
-    db:{
-        type:"postgres", //数据库类型
-        username: "postgres", //数据库名称
-        host: "localhost",//数据库主机
-        port: 5432,//数据库端口
-        database: "postgres",//数据库名称
-        password: "123456",//数据库密码
-        schema:'wallet',////数据库schema
-        entities:["src/entity/*.ts","entity/*.js"] //数据库实体文件位置，可不修改
-    }
+  "serverPort":8080,
+  "db":{
+    "type":"postgres",
+    "username": "postgres",
+    "host": "docker.for.mac.host.internal",
+    "port": 5432,
+    "database": "postgres",
+    "password": "123456",
+    "schema":"wallet",
+    "entities":["src/entity/*.ts","entity/*.js"]
+  }
 }
+
 ```
 
 ### PersistentVolume
