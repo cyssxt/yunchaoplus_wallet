@@ -67,23 +67,24 @@ export async function infoWallet(ctx:Context, next:Next){
 
 export async function pageWallets(ctx:Context, next:Next){
     logger.info("pageWallets")
-    let {limit,offset,created_begin,created_end} = await pageSchema.validateAsync(ctx.request.query);
+    let {page,count,begin_time,end_time} = await pageSchema.validateAsync(ctx.request.query);
     let repository = getManager().getRepository(Wallet);
     let queryBuilder = await repository.createQueryBuilder("wallet");
     queryBuilder.where("1=1")
-    if(created_begin){
-        queryBuilder.andWhere("wallet.created>=:created_begin")
+    if(begin_time){
+        queryBuilder.andWhere("wallet.created>=:begin_time")
     }
-    if(created_end){
-        queryBuilder.andWhere("wallet.created<=:created_end")
+    if(end_time){
+        queryBuilder.andWhere("wallet.created<=:end_time")
     }
-    if(created_begin){
-        queryBuilder.setParameter("created_begin",created_begin)
+    if(begin_time){
+        queryBuilder.setParameter("begin_time",begin_time)
     }
-    if(created_end){
-        queryBuilder.setParameter("created_end",created_end)
+    if(end_time){
+        queryBuilder.setParameter("end_time",end_time)
     }
-    let [items,total] = await queryBuilder.addOrderBy("created","ASC").skip(offset).take(limit).getManyAndCount();
+    let offset = (page-1)*count;
+    let [items,total] = await queryBuilder.addOrderBy("created","ASC").skip(offset).take(count).getManyAndCount();
     ctx.success(items,total);
     await next();
 }

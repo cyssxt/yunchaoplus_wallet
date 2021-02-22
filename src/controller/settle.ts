@@ -47,24 +47,25 @@ export async function getSettle(ctx:Context,next:Next){
 export async function pageSettles(ctx:Context,next:Next){
     logger.info("pageSettles");
     let {wallet_id} = ctx.params;
-    let {offset,limit,created_begin,created_end} = await pageSchema.validateAsync(ctx.request.query);
+    let {page,count,begin_time,end_time} = await pageSchema.validateAsync(ctx.request.query);
     let repository = getManager().getRepository(Settle);
     let queryBuilder = repository.createQueryBuilder("settle");
     queryBuilder.where("settle.wallet_id=:wallet_id");
-    if(created_begin){
-        queryBuilder.andWhere("settle.created>=:created_begin")
+    if(begin_time){
+        queryBuilder.andWhere("settle.created>=:begin_time")
     }
-    if(created_end){
-        queryBuilder.andWhere("settle.created<=:created_end")
+    if(end_time){
+        queryBuilder.andWhere("settle.created<=:end_time")
     }
-    if(created_begin){
-        queryBuilder.setParameter("created_begin",created_begin)
+    if(begin_time){
+        queryBuilder.setParameter("begin_time",begin_time)
     }
-    if(created_end){
-        queryBuilder.setParameter("created_end",created_end)
+    if(end_time){
+        queryBuilder.setParameter("end_time",end_time)
     }
     queryBuilder.setParameter("wallet_id",wallet_id);
-    let [items,total] = await queryBuilder.addOrderBy("settle.created","ASC").offset(offset).take(limit).getManyAndCount();
+    let offset = (page-1)*count;
+    let [items,total] = await queryBuilder.addOrderBy("settle.created","ASC").offset(offset).take(count).getManyAndCount();
     ctx.success(items,total);
     await next();
 }
